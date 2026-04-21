@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>天穆村地方史展览网站</title>
+    
+    <!-- CDN 引入 Leaflet 和 Vue 3 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script>
+        /* =========================================================
+           一、数据配置区
+           =========================================================
+           存放所有点位资料、地图参数、坐标配置
+           非技术人员只需在此处修改内容即可
+        */
+        const EXHIBITION_CONFIG = {
+            home: {
+                title: "天穆村地方史展览",
+                subtitle: "空间里的时间，历史里的故乡",
+                backgroundImage: "assets/images/home_bg.jpg",
+                exhibitionBtn: {
+                    label: "去看展览",
+                    description: "泊岸·生根——天穆六百年"
+                },
+                mapBtn: {
+                    label: "去看地图",
+                    description: "1950 年与 2026 年的天穆村地图"
+                }
+            },
+            exhibitionUrl: "https://lily-725.github.io/museum/index.html",
+            maps: [
+                {
+                    year: 1950,
+                    imageUrl: "assets/images/map_1950.jpg",
+                    imageBounds: [[39.18, 117.15], [39.22, 117.20]], // 地图对齐坐标：[[南, 西], [北, 东]]
+                    maxZoom: 18, // 限制1950年借阅件无限放大
+                    points: [
+                        {
+                            id: '1950-1',
+                            title: '老渡口遗址',
+                            coords: [39.201, 117.175],
+                            chapter: '枕河而居',
+                            description: '作为天穆村昔日的交通枢纽，老渡口见证了数百年的商贸往来与漕运繁华。',
+                            images: ['assets/images/1950_ferry.jpg'],
+                            audio: 'assets/audio/1950_ferry.mp3'
+                        },
+                        {
+                            id: '1950-2',
+                            title: '清真大寺旧貌',
+                            coords: [39.205, 117.180],
+                            chapter: '新月下的成长',
+                            description: '古老的清真大寺是乡民的精神寄托与社区活动的中心地带。',
+                            images: [],
+                            audio: ''
+                        },
+                        {
+                            id: '1950-3',
+                            title: '古老手工作坊',
+                            coords: [39.203, 117.185],
+                            chapter: '舟车辐辏',
+                            description: '曾经满是各类传统工艺人的街道，日夜传来叮当声与叫卖声。',
+                            images: [],
+                            audio: ''
+                        },
+                        {
+                            id: '1950-4',
+                            title: '早期牛羊肉集市',
+                            coords: [39.208, 117.178],
+                            chapter: '牛羊嘉馔',
+                            description: '声名远播的天穆牛羊肉早期交易场景，充满生活气息的情景。',
+                            images: [],
+                            audio: ''
+                        },
+                        {
+                            id: '1950-5',
+                            title: '运河古堤坝',
+                            coords: [39.198, 117.170],
+                            chapter: '枕河而居',
+                            description: '防御北运河水患的砖石河堤，记录了村庄与水域共存的过往。',
+                            images: [],
+                            audio: ''
+                        },
+                        {
+                            id: '1950-6',
+                            title: '传统宗族宅院',
+                            coords: [39.200, 117.182],
+                            chapter: '新月下的成长',
+                            description: '以四合院为主的聚居形式，见证了家族文化的代代相传。',
+                            images: [],
+                            audio: ''
+                        }
+                    ]
+                },
+                {
+                    year: 2026,
+                    imageUrl: "assets/images/map_2026.jpg",
+                    imageBounds: [[39.18, 117.15], [39.22, 117.20]],
+                    maxZoom: 20, // 现代地图容许更高缩放
+                    points: [
+                        {
+                            id: '2026-1',
+                            title: '现代天穆广场',
+                            coords: [39.202, 117.176],
+                            chapter: '新月下的成长',
+                            description: '经过现代化的改造，天穆广场已成为居民休闲、文化交流的重要公共空间。',
+                            images: ['assets/images/2026_square.jpg'],
+                            audio: 'assets/audio/2026_square.mp3'
+                        },
+                        {
+                            id: '2026-2',
+                            title: '运河生态文化长廊',
+                            coords: [39.195, 117.168],
+                            chapter: '枕河而居',
+                            description: '结合运河水系打造的生态主题走廊，展现天穆滨水风貌的新名片。',
+                            images: [],
+                            audio: ''
+                        },
+                        {
+                            id: '2026-3',
+                            title: '交通枢纽公交站',
+                            coords: [39.210, 117.195],
+                            chapter: '舟车辐辏',
+                            description: '便捷通畅的多维度交通网络，让这个古老村庄与大都会紧密相连。',
+                            images: [],
+                            audio: ''
+                        },
+                        {
+                            id: '2026-4',
+                            title: '民族风情美食街',
+                            coords: [39.206, 117.183],
+                            chapter: '牛羊嘉馔',
+                            description: '将非遗饮食与现代餐饮结合的地标性街区，食客始终络绎不绝。',
+                            images: [],
+                            audio: ''
+                        },
+                        {
+                            id: '2026-5',
+                            title: '科技产业创新园',
+                            coords: [39.215, 117.188],
+                            chapter: '舟车辐辏',
+                            description: '引入高新技术和现代商业的集体资产管理区，引领产业升级。',
+                            images: [],
+                            audio: ''
+                        },
+                        {
+                            id: '2026-6',
+                            title: '天津实验小学天穆分校',
+                            coords: [39.204, 117.172],
+                            chapter: '新月下的成长',
+                            description: '提供一流教学资源的教育基地，孕育着整个社区未来的希望。',
+                            images: [],
+                            audio: ''
+                        }
+                    ]
+                }
+            ]
+        };
+    </script>
+
+    <style>
+        /* =========================================================
+           二、样式区（CSS）
+           =========================================================
+           页面布局与响应式样式
+        */
+        :root {
+            --c-bg: #f8f6f0;
+            --c-ink: #2c2a27;
+            --c-accent: #8b3c3c;
+            --c-border: rgba(44, 42, 39, 0.15);
+            --font-serif: "Noto Serif SC", Georgia, "Times New Roman", serif;
+            --font-sans: "Helvetica Neue", Arial, sans-serif;
+            z-index: 1; /* 地图层级基础 */
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--c-bg);
+            color: var(--c-ink);
+            font-family: var(--font-sans);
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .view-layer {
+            position: absolute;
+            inset: 0;
+            background-color: var(--c-bg);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        /* ---------------- Home Style ---------------- */
+        .home-view {
+            z-index: 20;
+            display: flex;
+            flex-direction: row;
+        }
+
+        .home-bg-layer {
+            position: absolute;
+            inset: 0;
+            background: #000;
+        }
+        .home-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+        }
+
+        .home-content {
+            position: relative;
+            z-index: 21;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        .home-title-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #fff;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .home-title {
+            font-family: var(--font-serif);
+            font-size: 5rem;
+            margin: 0 0 1rem 0;
+            font-weight: 900;
+        }
+
+        .home-subtitle {
+            font-size: 1.5rem;
+            letter-spacing: 0.1em;
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .home-nav-area {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 40px;
+            text-align: center;
+        }
+
+        .nav-btn {
+            background: rgba(248, 246, 240, 0.95);
+            border: 1px solid var(--c-ink);
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        .nav-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 1px solid var(--c-ink);
+            transform: translate(6px, 6px);
+            transition: transform 0.2s ease;
+            z-index: -1;
+        }
+
+        .nav-btn:hover {
+            background: var(--c-ink);
+            color: var(--c-bg);
+            transform: translate(2px, 2px);
+        }
+        .nav-btn:hover::after {
+            transform: translate(4px, 4px);
+        }
+        .nav-btn:hover .nav-btn-divider { background-color: var(--c-bg); }
+
+        .nav-btn-label {
+            font-size: 1.8rem;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+        }
+
+        .nav-btn-divider {
+            width: 40px;
+            height: 1px;
+            background-color: var(--c-ink);
+            margin: 15px 0;
+            opacity: 0.3;
+        }
+
+        .nav-btn-desc {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            font-style: italic;
+            font-family: var(--font-serif);
+        }
+
+        /* ---------------- Exhibition Style ---------------- */
+        .top-navbar {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--c-border);
+            background: #fff;
+            z-index: 50;
+        }
+
+        .back-nav {
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--c-accent);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border: 1px solid transparent;
+            border-radius: 20px;
+            transition: background 0.2s;
+        }
+        .back-nav:hover { background: rgba(139, 60, 60, 0.05); }
+        .iframe-wrap {
+            flex: 1;
+            width: 100%;
+        }
+
+        /* ---------------- Map Style ---------------- */
+        .map-wrapper {
+            position: relative;
+            flex: 1;
+        }
+        #leaflet-container {
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* 强制层级规范: 1 */
+            background-color: #e5e3df; /* 骨架屏色 */
+        }
+
+        .timeline {
+            height: 80px;
+            background: #fff;
+            border-top: 1px solid var(--c-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            z-index: 50;
+        }
+
+        .year-selector {
+            padding: 10px 40px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--c-ink);
+            background: transparent;
+            border: 2px solid var(--c-border);
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .year-selector.active {
+            background: var(--c-accent);
+            color: #fff;
+            border-color: var(--c-accent);
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(139, 60, 60, 0.3);
+        }
+
+        .map-guide-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(248, 246, 240, 0.85);
+            backdrop-filter: blur(3px);
+            pointer-events: none;
+        }
+
+        .map-floating-tools {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 400; /* Leaflet 默认控制层之下 */
+        }
+        
+        .map-tool-btn {
+            background: #fff;
+            border: 2px solid rgba(0,0,0,0.2);
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* ---------------- Modal Style ---------------- */
+        .global-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 9998; /* 强制层级规范: >= 9998 */
+            transition: opacity 0.3s;
+        }
+
+        .detail-modal {
+            position: fixed;
+            z-index: 9999; /* 强制层级规范: >= 9999 */
+            inset: 60px 10%;
+            background: var(--c-bg);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: row;
+            border: 1px solid var(--c-ink);
+            overflow: hidden;
+            animation: modal-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modal-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid var(--c-border);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 50;
+            transition: all 0.2s;
+        }
+        .modal-close:hover { background: #fff; transform: scale(1.1); }
+
+        .modal-image-area {
+            flex: 1;
+            background: #1a1a1a;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .modal-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s;
+        }
+
+        .modal-img:hover {
+            transform: scale(1.2);
+            cursor: zoom-in;
+        }
+
+        .img-fallback { color: #888; font-family: var(--font-serif); font-size: 1.2rem; }
+
+        .modal-info-area {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .chapter-badge {
+            align-self: flex-start;
+            padding: 6px 16px;
+            border: 1px solid var(--c-accent);
+            color: var(--c-accent);
+            font-size: 0.85rem;
+            border-radius: 40px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .info-title {
+            font-family: var(--font-serif);
+            font-size: 2.5rem;
+            margin: 0 0 20px 0;
+            line-height: 1.2;
+        }
+
+        .info-desc {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            opacity: 0.8;
+            flex: 1;
+            white-space: pre-wrap;
+        }
+
+        .audio-wrapper {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid var(--c-border);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .audio-play-btn {
+            width: 56px;
+            height: 56px; /* 触控热区要求 > 48px */
+            border-radius: 50%;
+            background: var(--c-accent);
+            color: #fff;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(139, 60, 60, 0.3);
+        }
+
+        /* ---------------- Responsive Style ---------------- */
+        @media (max-width: 1024px) {
+            .home-title { font-size: 3.5rem; }
+            .detail-modal { inset: 40px 5%; }
+        }
+
+        @media (max-width: 768px) {
+            /* 手机端主页左右排列改为上下或底部排列 */
+            .home-content {
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 30px 20px;
+                text-align: center;
+            }
+            .home-title-area {
+                flex: none;
+                justify-content: flex-start;
+                margin-top: 10vh;
+            }
+            .home-title { font-size: 3rem; }
+            .home-nav-area {
+                width: 100%;
+                flex-direction: column;
+                gap: 20px;
+                padding-bottom: 30px;
+            }
+            .nav-btn { padding: 20px; }
+
+            /* 弹窗调整为上下布局 */
+            .detail-modal {
+                inset: 0;
+                flex-direction: column;
+                border: none;
+                border-radius: 0;
+            }
+            .modal-image-area {
+                flex: none;
+                height: 40%;
+            }
+            .modal-info-area {
+                padding: 30px 20px;
+            }
+            .info-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- =========================================================
+         三、模板区（HTML）
+         =========================================================
+         Vue 挂载 DOM 结构
+    -->
+    <div id="app">
+        <!-- 1. 首页 (Home) -->
+        <div v-show="viewState === 'home'" class="home-view view-layer">
+            <div class="home-bg-layer">
+                <!-- 缺省容错: img onError 隐藏 -->
+                <img :src="config.home.backgroundImage" class="home-bg" @error="hideDomElement">
+            </div>
+            <div class="home-content">
+                <div class="home-title-area">
+                    <h1 class="home-title">{{ config.home.title }}</h1>
+                    <p class="home-subtitle">{{ config.home.subtitle }}</p>
+                </div>
+                <!-- 入口位于右侧上下排列 (移动端下部排列) -->
+                <div class="home-nav-area">
+                    <div class="nav-btn" @click="navigate('exhibition')">
+                        <div class="nav-btn-label">{{ config.home.exhibitionBtn.label }}</div>
+                        <div class="nav-btn-divider"></div>
+                        <div class="nav-btn-desc">{{ config.home.exhibitionBtn.description }}</div>
+                    </div>
+                    <div class="nav-btn" @click="navigate('map')">
+                        <div class="nav-btn-label">{{ config.home.mapBtn.label }}</div>
+                        <div class="nav-btn-divider"></div>
+                        <div class="nav-btn-desc">{{ config.home.mapBtn.description }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 展览页 (Exhibition) -->
+        <div v-show="viewState === 'exhibition'" class="view-layer">
+            <div class="top-navbar">
+                <div class="back-nav" @click="navigate('home')">← 返回首页</div>
+                <h3 style="margin:0;">天穆六百年线上展览</h3>
+                <div style="width:100px;"></div>
+            </div>
+            <iframe :src="config.exhibitionUrl" class="iframe-wrap" frameborder="0" onerror="this.outerHTML='<div style=text-align:center;padding:50px;>展览加载失败，请重试或检查链接。</div>'"></iframe>
+        </div>
+
+        <!-- 3. 地图页 (Map) -->
+        <div v-show="viewState === 'map'" class="view-layer" :style="{ zIndex: modalActive ? '1' : '10' }">
+            <div class="top-navbar">
+                <div class="back-nav" @click="navigate('home')">← 返回首页</div>
+                <h3 style="margin:0;">时空交互地图</h3>
+                <div style="width:100px;"></div>
+            </div>
+            
+            <!-- 互斥显示：弹窗出现时地图容器可根据需要隐藏(这里通过层级控制配合遮罩处理) -->
+            <div class="map-wrapper" :style="{ visibility: modalActive ? 'hidden' : 'visible' }">
+                <div id="leaflet-container"></div>
+                
+                <!-- 预设导览提示 -->
+                <div v-if="!activeYear" class="map-guide-overlay">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.3; margin-bottom: 20px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <h2 style="margin:0;font-family:var(--font-serif)">请点击下方时间轴选择年代</h2>
+                    <p style="opacity:0.7">探索天穆村 1950 年与 2026 年的空间变迁</p>
+                </div>
+
+                <div v-show="activeYear" class="map-floating-tools">
+                    <button class="map-tool-btn" @click="resetView">重置视图</button>
+                </div>
+            </div>
+
+            <div class="timeline">
+                <button 
+                    v-for="m in config.maps" 
+                    :key="m.year"
+                    class="year-selector"
+                    :class="{ active: activeYear === m.year }"
+                    @click="switchYear(m.year)"
+                >
+                    {{ m.year }} 年
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. 点位详情弹窗 (Modal) -->
+        <!-- 遮罩层级 z-index: 9998 -->
+        <div v-if="modalActive" class="global-mask" @click="closeModal"></div>
+        
+        <!-- 弹窗层级 z-index: 9999 -->
+        <div v-if="modalActive && focusedPoint" class="detail-modal">
+            <button class="modal-close" @click="closeModal">✕</button>
+            
+            <!-- 媒体展示区 -->
+            <div class="modal-image-area">
+                <img 
+                    v-if="focusedPoint.images && focusedPoint.images.length > 0" 
+                    :src="focusedPoint.images[imageIdx]" 
+                    class="modal-img" 
+                    @error="hideDomElement"
+                >
+                <div v-else class="img-fallback">
+                    [ 暂无历史影像资料 ]
+                </div>
+            </div>
+
+            <!-- 文本与音频区 -->
+            <div class="modal-info-area">
+                <div class="chapter-badge">{{ focusedPoint.chapter }}</div>
+                <h2 class="info-title">{{ focusedPoint.title }}</h2>
+                <div class="info-desc">{{ focusedPoint.description }}</div>
+                
+                <!-- 缺省容错: 如果音频路径存在才显示播放栏 -->
+                <div v-if="focusedPoint.audio" class="audio-wrapper">
+                    <button class="audio-play-btn" @click="toggleAudio">
+                        <span v-if="isPlaying">⏸</span>
+                        <span v-else>▶</span>
+                    </button>
+                    <div>
+                        <div style="font-weight:bold; font-size: 1.1rem">口述史料 / 导览语音</div>
+                        <div style="font-size: 0.85rem; opacity:0.6; margin-top:4px">MP3 Format - 点击播放防止折叠</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================================
+           四、逻辑区（JS）
+           =========================================================
+           Vue 实例、Leaflet 初始化与交互逻辑
+        */
+        const { createApp, ref, onMounted, onUnmounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                // 读取数据配置
+                const config = ref(EXHIBITION_CONFIG);
+                
+                // 页面路由状态管理 'home' | 'exhibition' | 'map'
+                const viewState = ref('home');
+                
+                // 地图状态
+                const activeYear = ref(null);
+                const leafletMap = ref(null);
+                const markerGroup = ref(null);
+                const activeOverlay = ref(null);
+
+                // 弹窗状态
+                const modalActive = ref(false);
+                const focusedPoint = ref(null);
+                const imageIdx = ref(0);
+
+                // 音频状态
+                const currentAudio = ref(null);
+                const isPlaying = ref(false);
+
+                // --- 路由与导航 ---
+                const navigate = (targetView) => {
+                    if (viewState.value !== targetView) {
+                        viewState.value = targetView;
+                        
+                        // 地图初始化需要 DOM 挂载完成
+                        if (targetView === 'map') {
+                            setTimeout(() => initMap(), 100);
+                        } else if (targetView === 'home') {
+                            // 返回主页时重置年份
+                            activeYear.value = null;
+                        }
+                    }
+                };
+
+                // --- 移动端虚拟路由 (虚拟回退逻辑) ---
+                const pushHistoryState = (stateObj) => {
+                    history.pushState(stateObj, '');
+                };
+
+                const handlePopState = (e) => {
+                    if (modalActive.value) {
+                        // 1. 优先关闭弹窗
+                        closeModal();
+                    } else if (viewState.value !== 'home') {
+                        // 2. 在展览/地图页退回首页
+                        navigate('home');
+                    }
+                };
+
+                onMounted(() => {
+                    history.replaceState({ view: 'home' }, '');
+                    window.addEventListener('popstate', handlePopState);
+                });
+                
+                watch(viewState, (newVal) => {
+                    if (!modalActive.value) pushHistoryState({ view: newVal });
+                });
+
+                // --- 地图业务逻辑 ---
+                const initMap = () => {
+                    if (leafletMap.value) return; // 避免重复初始化
+
+                    leafletMap.value = L.map('leaflet-container', {
+                        zoomControl: false, // 自定义位置或隐藏
+                        attributionControl: false
+                    }).setView([39.2, 117.175], 15);
+
+                    L.control.zoom({ position: 'bottomright' }).addTo(leafletMap.value);
+                    markerGroup.value = L.layerGroup().addTo(leafletMap.value);
+                };
+
+                const switchYear = (year) => {
+                    activeYear.value = year;
+                    const mapData = config.value.maps.find(m => m.year === year);
+                    if (!mapData || !leafletMap.value) return;
+
+                    // 1. 清理上一层图层和标记点
+                    markerGroup.value.clearLayers();
+                    if (activeOverlay.value) {
+                        leafletMap.value.removeLayer(activeOverlay.value);
+                    }
+
+                    // 2. 限制最大缩放级别（如1950年扫描图片避免马赛克）
+                    leafletMap.value.setMaxZoom(mapData.maxZoom);
+
+                    // 3. 配置叠加底图 (ImageOverlay)
+                    activeOverlay.value = L.imageOverlay(mapData.imageUrl, mapData.imageBounds).addTo(leafletMap.value);
+
+                    // 4. 重置视图范围
+                    leafletMap.value.fitBounds(mapData.imageBounds);
+
+                    // 5. 渲染点位交互
+                    mapData.points.forEach(point => {
+                        // 使用默认 marker，如需定制可配置 L.divIcon
+                        const marker = L.marker(point.coords).addTo(markerGroup.value);
+                        marker.on('click', () => openModal(point));
+                    });
+                };
+
+                const resetView = () => {
+                    if (activeYear.value) {
+                        const mapData = config.value.maps.find(m => m.year === activeYear.value);
+                        if (mapData) {
+                            leafletMap.value.fitBounds(mapData.imageBounds);
+                        }
+                    }
+                };
+
+                // --- 弹框逻辑 ---
+                const openModal = (point) => {
+                    focusedPoint.value = point;
+                    imageIdx.value = 0;
+                    modalActive.value = true;
+                    // 加入新历史层，拦截移动端返回
+                    pushHistoryState({ modal: true });
+                };
+
+                const closeModal = () => {
+                    modalActive.value = false;
+                    focusedPoint.value = null;
+                    stopAudio(); // 弹窗关闭即停止音频防重叠
+                };
+
+                // --- 音频排他性播放逻辑 ---
+                const toggleAudio = () => {
+                    if (isPlaying.value) {
+                        stopAudio();
+                    } else {
+                        playAudio();
+                    }
+                };
+
+                const playAudio = () => {
+                    if (!focusedPoint.value || !focusedPoint.value.audio) return;
+                    
+                    if (!currentAudio.value) {
+                        currentAudio.value = new Audio(focusedPoint.value.audio);
+                        currentAudio.value.onended = () => isPlaying.value = false;
+                    } else if (currentAudio.value.src !== new URL(focusedPoint.value.audio, document.baseURI).href) {
+                        currentAudio.value.src = focusedPoint.value.audio;
+                    }
+
+                    currentAudio.value.play().catch(e => console.warn('Audio play prevented:', e));
+                    isPlaying.value = true;
+                };
+
+                const stopAudio = () => {
+                    if (currentAudio.value) {
+                        currentAudio.value.pause();
+                        currentAudio.value.currentTime = 0;
+                    }
+                    isPlaying.value = false;
+                };
+
+                // --- 容错 / 辅助方法 ---
+                const hideDomElement = (e) => {
+                    e.target.style.display = 'none';
+                };
+
+                return {
+                    config,
+                    viewState,
+                    activeYear,
+                    modalActive,
+                    focusedPoint,
+                    imageIdx,
+                    isPlaying,
+
+                    navigate,
+                    switchYear,
+                    resetView,
+                    openModal,
+                    closeModal,
+                    toggleAudio,
+                    hideDomElement
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
